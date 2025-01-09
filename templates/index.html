@@ -59,7 +59,7 @@
     <!-- Section 0 -->
     <div x-show="step === 0">
       <div class="container">
-        <h1>Address</h1>
+        <h1>Permiter Calculator</h1>
         <p>Please enter your home address 🏠</p>
         <hr style="max-width: 600px" />
         <form id="address__form" class="form" onsubmit="console.log('nigga')">
@@ -84,7 +84,6 @@
               </select>
             </label>
           </div>
-          <hr style="max-width: 600px" />
           <button
             @click="step = Math.min(step + 1, 1)"
             :disabled="step === 1"
@@ -165,7 +164,7 @@
         </div>
         <div
           id="map"
-          style="width: 700px; height: 400px; border-radius: 15px"
+          style="width: 700px; height: 300px; border-radius: 15px"
           tabindex="0"
         ></div>
         <div style="width: 100%; max-width: 800px">
