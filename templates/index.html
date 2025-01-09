@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>Leaflet.draw vector editing handlers</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+      defer
+    ></script>
+    <link
+      rel="shortcut icon"
+      type="image/x-icon"
+      href="docs/images/favicon.ico"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
+      integrity="sha512-ozq8xQKq6urvuU6jNgkfqAmT7jKN2XumbrX1JiB3TnF7tI48DPI4Gy1GXKD/V3EExgAs1V+pRO7vwtS1LHg0Gw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw-src.css"
+      integrity="sha512-vJfMKRRm4c4UupyPwGUZI8U651mSzbmmPgR3sdE3LcwBPsdGeARvUM5EcSTg34DK8YIRiIo+oJwNfZPMKEQyug=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw-src.js"
+      integrity="sha512-czICF/Crp0B7QB13iQZG9bYUpd/P1Ona1NeZN52gYsoVFXIpakDmdOUepMCHCMBIBd9Ei5Mlg8Quy4e504IT5A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+      integrity="sha512-gc3xjCmIy673V6MyOAZhIW93xhM9ei1I+gLbmFjUHIjocENRsLX/QUE1htk5q1XV2D/iie/VQ8DXI6Vu8bexvQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body x-data="{ step: 0 }">
+    <!-- Section 0 -->
+    <div x-show="step === 0">
+      <div class="container">
+        <h1>Address</h1>
+        <p>Please enter your home address 🏠</p>
+        <hr style="max-width: 600px" />
+        <form id="address__form" class="form" onsubmit="console.log('nigga')">
+          <label class="field">
+            <span class="field__label" for="address">Address</span>
+            <input class="field__input" type="text" id="address" />
+          </label>
+          <div class="fields fields--3">
+            <label class="field">
+              <span class="field__label" for="zipcode">Postal code</span>
+              <input class="field__input" type="text" id="zipcode" />
+            </label>
+            <label class="field">
+              <span class="field__label" for="city">City</span>
+              <input class="field__input" type="text" id="city" />
+            </label>
+            <label class="field">
+              <span class="field__label" for="state">Province</span>
+              <select class="field__input" id="state">
+                <option value="QC">Quebec</option>
+                <option value="ON">Ontario</option>
+              </select>
+            </label>
+          </div>
+          <hr style="max-width: 600px" />
+          <button
+            @click="step = Math.min(step + 1, 1)"
+            :disabled="step === 1"
+            class="button"
+            id="submit__button"
+            style="max-width: 600px"
+          >
+            Continue
+          </button>
+        </form>
+      </div>
+    </div>
+    <!-- Section 1 -->
+    <div x-show="step === 1">
+      <div
+        x-data="{ 
+          estimateModal: false, 
+          blocks: [], 
+          totalEstimate: 0, 
+          loadBlocks() {
+              this.blocks = $store.blocks || [];
+              this.calculateTotalEstimate();
+          },
+          calculateTotalEstimate() {
+              this.totalEstimate = this.blocks.reduce((total, block) => {
+                  const blockInFeet = block * 3.28084; // Convert meters to feet
+                  return total + (blockInFeet * 35); // Add the cost of this block
+              }, 0);
+          }
+      }"
+        class="container"
+      >
+        <div style="text-align: center">
+          <h1>Street View</h1>
+          <p>
+            Trace the
+            <span
+              style="
+                color: rgb(189 206 230);
+                border: 2px dashed rgb(130 177 239);
+                padding-inline: 4px;
+              "
+              >perimeter</span
+            >
+            of your home 🏠
+          </p>
+        </div>
+        <div
+          x-show="estimateModal"
+          @click.away="estimateModal = false"
+          class="modal"
+        >
+          <h3>
+            Your total estimate is
+            <span
+              style="color: rgb(109, 193, 26)"
+              x-text="totalEstimate.toFixed(2) + ' $'"
+            ></span>
+          </h3>
+          <div>
+            <template x-for="(block, index) in blocks" :key="index">
+              <div>
+                <p>
+                  <strong x-text="'Block ' + (index+1)"></strong>
+                  <span x-text="block + ' meters'"></span>
+                  (
+                  <span x-text="(block * 3.28084).toFixed(2) + ' feet'"></span>
+                  )
+                  <br />
+                  <strong>Price:</strong>
+                  <span
+                    x-text="((block * 3.28084) * 35).toFixed(2) + ' $'"
+                  ></span>
+                </p>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div
+          id="map"
+          style="width: 700px; height: 400px; border-radius: 15px"
+          tabindex="0"
+        ></div>
+        <div style="width: 100%; max-width: 800px">
+          <button
+            class="button"
+            style="margin-top: 10px; background-color: rgb(109, 193, 26)"
+            @click="estimateModal = true; loadBlocks()"
+          >
+            Estimate 💰
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+    const button = document.getElementById("submit__button");
+    button.addEventListener("click", (event) => {
+      console.log("Form submitted");
+      const address = document.getElementById("address").value;
+      const zipcode = document.getElementById("zipcode").value;
+      const city = document.getElementById("city").value;
+      const state = document.getElementById("state").value;
+      console.log(address, zipcode, city, state);
+
+      const fullAddress = `${address}, ${city}, ${state}, ${zipcode}`;
+
+      const url = `https://api.tomtom.com/maps/orbis/places/geocode/${fullAddress}.json?key=5Cae0Fs29lR7nu8TKmPkEqyBwWYe9nqa&apiVersion=1`;
+
+      fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data);
+          const lat = data.results[0].position.lat;
+          const lon = data.results[0].position.lon;
+          map.setView([lat, lon], 19);
+        });
+    });
+
+    document.addEventListener("alpine:init", () => {
+      Alpine.store("blocks", []);
+      init_map();
+    });
+
+    function init_map() {
+      let osmUrl = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      osmAttrib =
+        '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+      (map = new L.Map("map", {
+        center: new L.LatLng(45.678591, -73.725547),
+        zoom: 19,
+      })),
+        (osm = L.tileLayer(osmUrl, {
+          maxZoom: 20,
+          attribution: osmAttrib,
+        }).addTo(map));
+      drawnItems = L.featureGroup().addTo(map);
+
+      map.addControl(
+        new L.Control.Draw({
+          edit: {
+            delete: true,
+            edit: false,
+            featureGroup: drawnItems,
+            poly: {
+              allowIntersection: false,
+            },
+          },
+          draw: {
+            polygon: {
+              allowIntersection: false,
+              showArea: true,
+              showMeasurements: true,
+            },
+            polyline: false, // Disable drawing polylines
+            rectangle: false, // Disable drawing rectangles
+            circle: false, // Disable drawing circles
+            ring: false, // Disable drawing rings
+            marker: false, // Disable placing markers
+            circlemarker: false,
+          },
+        })
+      );
+
+      // Function to calculate perimeter of a polygon
+      function calculatePerimeter(polygon) {
+        let latLngs = polygon.getLatLngs()[0]; // Get the array of lat/lngs
+        let perimeter = 0;
+
+        for (let i = 0; i < latLngs.length - 1; i++) {
+          perimeter += latLngs[i].distanceTo(latLngs[i + 1]); // Add distance between consecutive points
+        }
+
+        // Close the loop (distance between last and first point)
+        perimeter += latLngs[latLngs.length - 1].distanceTo(latLngs[0]);
+
+        return perimeter; // Return the perimeter in meters
+      }
+
+      map.on(L.Draw.Event.CREATED, function (event) {
+        let layer = event.layer;
+        drawnItems.addLayer(layer);
+
+        //print the perimeter of the polygon the permiter is not the area it is the sum of all the sides
+
+        if (layer instanceof L.Polygon) {
+          let perimeter = calculatePerimeter(layer);
+          perimeter = perimeter.toFixed(2);
+          // add the perimeter on the layer not as a popup but as actual text on the layer
+          L.marker(layer.getBounds().getCenter(), {
+            icon: L.divIcon({
+              className: "text-labels" + " " + perimeter, // Set class for CSS styling
+              html: `${perimeter} m`, // Add text
+            }),
+          }).addTo(drawnItems);
+
+          // fetch blocks from alpine store
+          let blocks = Alpine.store("blocks");
+          blocks.push(parseFloat(perimeter));
+          Alpine.store("blocks", blocks);
+          console.log(blocks);
+        }
+      });
+
+      //delete the blcok form the local storage
+      map.on(L.Draw.Event.DELETED, function (event) {
+        //calculate the perimeter of the polygon
+        let layers = event.layers;
+
+        layers.eachLayer(function (layer) {
+          if (layer instanceof L.Polygon) {
+            let perimeter = calculatePerimeter(layer);
+            perimeter = perimeter.toFixed(2);
+            let blocks = Alpine.store("blocks");
+            blocks = blocks.filter((block) => block !== parseFloat(perimeter));
+            Alpine.store("blocks", blocks);
+            console.log(blocks);
+          }
+        });
+      });
+    }
+  </script>
+</html>
